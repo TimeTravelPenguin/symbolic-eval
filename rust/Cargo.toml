@@ -12,11 +12,15 @@ getrandom = { version = "0.4.3" }
 hashbrown = { version = "0.17.1", features = ["serde"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_bytes = "0.11.19"
-symbolica = { git = "https://github.com/symbolica-dev/symbolica", branch = "wasm2", version = "2.0.0", default-features = false, features = [
-  "wasm",
-] }
 thiserror = "2.0.19"
 wasm-minimal-protocol = "0.2.0"
+
+[dependencies.symbolica]
+git = "https://github.com/symbolica-dev/symbolica"
+branch = "wasm2"
+version = "2.0.0"
+default-features = false
+features = ["wasm"]
 
 [profile.release]
 lto = true        # Enable link-time optimization
