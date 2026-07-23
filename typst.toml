@@ -1,0 +1,21 @@
+[package]
+name = "symbolic-eval"
+version = "0.0.1"
+compiler = "0.15.0"
+entrypoint = "src/lib.typ"
+authors = ["TimeTravelPenguin <@TimeTravelPenguin>"]
+license = "MIT"
+description = "Symbolic expression evaluation powered by Symbolica"
+repository = "https://github.com/TimeTravelPenguin/symbolic-eval"
+keywords = ["symbolica", "symbolic", "evaluation", "expression", "math", "wasm"]
+categories = []
+
+# Tytanic test runner. `ppi` must match `PPI` in `tests/lib.typ` so that 32px
+# sprite cells land on whole pixels. Comparison is exact (no per-pixel slack).
+# [tool.tytanic]
+# tests = "tests"
+#
+# [tool.tytanic.default]
+# ppi = 300
+# max-delta = 0
+# max-deviations = 0
