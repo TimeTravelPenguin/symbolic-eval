@@ -8,7 +8,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 ciborium = "0.2.2"
-getrandom = { version = "0.4.3" }
+getrandom = { version = "0.3" } # match symbolica
 hashbrown = { version = "0.17.1", features = ["serde"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_bytes = "0.11.19"
