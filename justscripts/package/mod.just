@@ -1,5 +1,5 @@
-VER := `dasel -i toml 'package.version' < typst.toml | tr -d "'"`
-PKG_NAME := `dasel -i toml 'package.name' < typst.toml | tr -d "'"`
+VER := `dasel -i toml 'package.version' < ../../typst.toml | tr -d "'"`
+PKG_NAME := `dasel -i toml 'package.name' < ../../typst.toml | tr -d "'"`
 
 _default:
   @just --list package
