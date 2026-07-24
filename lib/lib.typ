@@ -11,12 +11,52 @@
   )
 }
 
-#let eval_expr(expr, symbol, domain) = {
-  let expr = cbor.encode(expr)
-  let symbol = cbor.encode(symbol)
-  let domain = cbor.encode(domain)
 
-  let result = _plugin.eval_expr(expr, symbol, domain)
+#let func(name, args, body) = {
+  assert.eq(type(name), "string", message: "name must be a string")
+  assert.eq(type(args), "array", message: "args must be an array")
+  assert(
+    args.all(arg => type(arg) == "string"),
+    message: "all args must be strings",
+  )
+  assert.eq(type(body), "string", message: "body must be a string")
+
+  (
+    name: name,
+    args: args,
+    body: body,
+  )
+}
+
+// #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+// pub struct PluginArgs {
+//     pub exprs: Vec<String>,
+//     pub params: Vec<String>,
+//     pub functions: Vec<PluginArgsFunction>,
+//     pub domains: Vec<SymbolDomain>,
+// }
+
+
+#let eval_exprs(exprs, symbols, functions, domains) = {
+  assert.eq(type(exprs), array, message: "exprs must be an array")
+  assert(
+    exprs.all(expr => type(expr) == str),
+    message: "all exprs must be strings",
+  )
+  assert.eq(type(symbols), array, message: "symbols must be an array")
+  assert(
+    symbols.all(symbol => type(symbol) == str),
+    message: "all symbols must be strings",
+  )
+
+  let input = cbor.encode((
+    exprs: exprs,
+    params: symbols,
+    functions: functions,
+    domains: domains,
+  ))
+
+  let result = _plugin.eval_expr(input)
 
   cbor(result)
 }
