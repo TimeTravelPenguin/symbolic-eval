@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use symbolica::prelude::*;
 
@@ -140,54 +141,32 @@ pub fn eval_exprs(eval_args: EvaluationArgs) -> Result<EvaluationResult, Symboli
 
     let mut ev = ev.build()?.map_coeff(&|c| c.re.to_f64());
 
-    let domains = eval_args
-        .domains
-        .iter()
-        .map(|d| {
-            let step = (d.max - d.min) / (d.samples as f64 - 1.0);
-            (0..d.samples).map(move |i| d.min + step * (i as f64))
-        })
-        .collect::<Vec<_>>();
+    let total_samples: usize = eval_args.domains.iter().map(|d| d.samples).product();
+    let mut results = Vec::with_capacity(total_samples);
 
-    let mut results = Vec::with_capacity(
-        eval_args.exprs.len() * eval_args.domains.iter().map(|d| d.samples).sum::<usize>(),
-    );
+    let domains = eval_args.domains.iter().map(|domain| {
+        let step = if domain.samples > 1 {
+            (domain.max - domain.min) / (domain.samples - 1) as f64
+        } else {
+            0.0
+        };
 
-    // In order to evaluate the expressions over the Cartesian product of the
-    // domains, we need to iterate over all combinations of indices for each
-    // domain. We can do this by maintaining a vector of indices, where each
-    // index corresponds to the current position in the respective domain's
-    // iterator.
-
-    let mut indices = vec![0; domains.len()];
-    loop {
-        let inputs: Vec<f64> = indices
-            .iter()
-            .enumerate()
-            .map(|(i, &idx)| domains[i].clone().nth(idx).unwrap())
-            .collect();
-
-        let mut out = vec![0.0; eval_args.exprs.len()];
-        ev.evaluate(&inputs, &mut out);
-
-        results.push((inputs, out));
-
-        // Increment indices
-        let mut carry = true;
-        for i in (0..indices.len()).rev() {
-            if carry {
-                indices[i] += 1;
-                if indices[i] >= eval_args.domains[i].samples {
-                    indices[i] = 0;
-                } else {
-                    carry = false;
-                }
+        (0..domain.samples).map(move |idx| {
+            if idx == 0 {
+                domain.min
+            } else if idx + 1 == domain.samples {
+                domain.max
+            } else {
+                domain.min + step * idx as f64
             }
-        }
+        })
+    });
 
-        if carry {
-            break;
-        }
+    for inputs in domains.multi_cartesian_product() {
+        let mut out = vec![0.0; eval_args.exprs.len()];
+
+        ev.evaluate(&inputs, &mut out);
+        results.push((inputs, out));
     }
 
     Ok(results)
