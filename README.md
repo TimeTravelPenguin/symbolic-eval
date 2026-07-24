@@ -21,20 +21,22 @@ to visualise `f(z)` using traditional techniques. One way around this is to use 
 The pixel corresponding to the point `(x, y)` can be coloured using a colouring function
 that takes `u` and `v` as inputs. One such output could be the following:
 
-![phase plot of `(z^2 - 1) / (z^2 + 1)`](./assets/phase_portrait.png) 
+![phase plot of `(z^2 - 1) / (z^2 + 1)`](./assets/phase_portrait.png)
 
 This particular render contains many (too many) additional visual elements to show
 different features of the function (one or two on their own would normally be fine, but
 this is a demonstration). The image is downscaled massively, but was originally rendered
 at a high-resolution with 4x subsampling. For a _document_, these details can be lowered
 dramatically, but the point is that this is not a simple pipeline:
+
 1. Each pixel of the image must be coloured.
 2. Additional visual features may require additional computation complexity. In this case,
    finite-differences was required.
 3. Implementing sub-sampling for higher-quality renders.
 
 These few features can be too much for a language such as Typst. However, through WASM
-plugins, this can be handled with ease!
+plugins, this can be handled with ease! Highly performant expression evaluation makes it
+possible for package authors to do much more for less.
 
 Thus, a package such as this allows for, and demonstrates how, other packages to perform
 computations that would otherwise be too slow to compute normally.
@@ -51,7 +53,7 @@ want a nice formula or some other result that is an extension of some input.
 Normally, Typst would be an odd place for something like Symbolica. However, Typst
 currently lacks a way for WASM plugin developers to communicate _functions_ (or really,
 any kind of computation). If I wanted to ask a plugin to evaluate `x + 1` for me with the
-input of `x = 2 * (z^2 - 1) + y`, where `z = y - 1` and `y = 1`, there is no easy way to 
+input of `x = 2 * (z^2 - 1) + y`, where `z = y - 1` and `y = 1`, there is no easy way to
 do this.
 
 Now, imagine if a plugin developer wanted to make a phase-portrait renderer (the
@@ -121,6 +123,7 @@ evaluation, as I am trying to understand the issues surrounding compilation.
 ## Building this package
 
 If you want to build this package for yourself, you will need a few dependencies:
+
 - The [Rust](https://rust-lang.org) toolchain,
 - [Just](https://github.com/casey/just), required to run the build scripts,
 - [Dasel](https://github.com/TomWright/dasel), used for querying toml data,
