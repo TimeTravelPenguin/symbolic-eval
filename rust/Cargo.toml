@@ -10,6 +10,7 @@ crate-type = ["cdylib"]
 ciborium = "0.2.2"
 getrandom = { version = "0.3" } # match symbolica
 hashbrown = { version = "0.17.1", features = ["serde"] }
+itertools = "0.15.0"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_bytes = "0.11.19"
 thiserror = "2.0.19"

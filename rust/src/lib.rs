@@ -6,7 +6,6 @@ use codec::{decode, encode};
 pub use error::SymbolicEvalError;
 
 use serde::{Deserialize, Serialize};
-use symbolica::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
 use wasm_minimal_protocol::{initiate_protocol, wasm_func};
@@ -17,10 +16,7 @@ initiate_protocol!();
 #[cfg(target_arch = "wasm32")]
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::{
-    error::SymbolicaError,
-    evaluation::{EvaluationArgs, SymbolDomain},
-};
+use crate::evaluation::{EvaluationArgs, Function, SymbolDomain};
 
 #[cfg(target_arch = "wasm32")]
 #[unsafe(no_mangle)]
@@ -60,76 +56,17 @@ pub struct PluginArgs {
     pub domains: Vec<SymbolDomain>,
 }
 
-fn parse_exprs(exprs: &[String]) -> Result<Vec<Atom>, SymbolicEvalError> {
-    let result = exprs
-        .iter()
-        .map(|s| {
-            try_parse!(s).map_err(|s| SymbolicaError::Parse {
-                input: s.to_string(),
-                message: "Failed to parse input".to_string(),
-            })
-        })
-        .collect::<Result<_, _>>()?;
-
-    Ok(result)
-}
-
-fn parse_symbols(symbols: &[String]) -> Result<Vec<Symbol>, SymbolicEvalError> {
-    let result = symbols
-        .iter()
-        .map(|s| {
-            try_symbol!(s).map_err(|s| SymbolicaError::Symbol {
-                input: s.to_string(),
-                message: "Failed to parse symbol".to_string(),
-            })
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-
-    Ok(result)
-}
-
-fn parse_functions(
-    functions: &[PluginArgsFunction],
-) -> Result<Vec<evaluation::Function>, SymbolicEvalError> {
-    let result = functions
-        .iter()
-        .map(|f| {
-            let name = try_symbol!(&f.name).map_err(|s| SymbolicaError::Symbol {
-                input: s.to_string(),
-                message: "Failed to parse function name".to_string(),
-            })?;
-
-            let args = parse_symbols(&f.args)?;
-
-            let body = try_parse!(&f.body).map_err(|s| SymbolicaError::Parse {
-                input: s.to_string(),
-                message: "Failed to parse function body".to_string(),
-            })?;
-
-            Ok(evaluation::Function { name, args, body })
-        })
-        .collect::<Result<Vec<evaluation::Function>, SymbolicEvalError>>()?;
-
-    Ok(result)
-}
-
 #[cfg_attr(target_arch = "wasm32", wasm_func)]
 pub fn eval_expr(args: &[u8]) -> Result<Vec<u8>, SymbolicEvalError> {
     let args: PluginArgs = decode(args)?;
 
-    let args = EvaluationArgs {
-        exprs: parse_exprs(&args.exprs)?,
-        params: parse_exprs(&args.params)?,
-        functions: parse_functions(&args.functions)?,
-        domains: args.domains,
-    };
+    let functions = args
+        .functions
+        .iter()
+        .map(|f| Function::new(&f.name, &f.args, &f.body))
+        .collect::<Result<Vec<_>, _>>()?;
 
-    if args.exprs.is_empty() {
-        return Err(SymbolicEvalError::ArgumentError(
-            "No expressions provided".to_string(),
-        ));
-    }
-
+    let args = EvaluationArgs::new(&args.exprs, &args.params, &functions, &args.domains)?;
     let results = evaluation::eval_exprs(args)?;
 
     encode(&results)
