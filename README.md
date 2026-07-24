@@ -76,7 +76,7 @@ welcome you to open an issue to start a discussion.
 
 <summary>
     For now, I am using a custom backend, as is implemented in
-    [lib.rs](./rust/src/lib.rs).
+    <a href="./rust/src/lib.rs"><code>lib.rs</code></a>
 </summary>
 
 Compile time flags are additionally found in [justfile](./justfile)'s private `_build`
