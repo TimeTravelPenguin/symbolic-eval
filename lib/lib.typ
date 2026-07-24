@@ -13,13 +13,13 @@
 
 
 #let func(name, args, body) = {
-  assert.eq(type(name), "string", message: "name must be a string")
-  assert.eq(type(args), "array", message: "args must be an array")
+  assert.eq(type(name), str, message: "name must be a string")
+  assert.eq(type(args), array, message: "args must be an array")
   assert(
-    args.all(arg => type(arg) == "string"),
+    args.all(arg => type(arg) == str),
     message: "all args must be strings",
   )
-  assert.eq(type(body), "string", message: "body must be a string")
+  assert.eq(type(body), str, message: "body must be a string")
 
   (
     name: name,
@@ -27,15 +27,6 @@
     body: body,
   )
 }
-
-// #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-// pub struct PluginArgs {
-//     pub exprs: Vec<String>,
-//     pub params: Vec<String>,
-//     pub functions: Vec<PluginArgsFunction>,
-//     pub domains: Vec<SymbolDomain>,
-// }
-
 
 #let eval_exprs(exprs, symbols, functions, domains) = {
   assert.eq(type(exprs), array, message: "exprs must be an array")
