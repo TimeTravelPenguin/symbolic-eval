@@ -1,3 +1,4 @@
 target
 *.pdf
 *.wasm
+!/lib/wasm/symbolic_eval.wasm
