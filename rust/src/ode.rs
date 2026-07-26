@@ -98,7 +98,7 @@ impl ODEIntegrator for OdeMethod {
 ///
 /// The number of state variables is determined by `initial_conditions`, and
 /// must match the number of expressions in the [`Expressions`] passed to
-/// [`eval_ode`].
+/// [`solve_ode`].
 #[derive(Debug, Clone, Deserialize)]
 pub struct OdeConfig {
     /// The integrator to use, together with its per-method settings.
@@ -127,7 +127,7 @@ pub struct OdeConfig {
 /// Returns [`OdeError::OdeSolverError`] if the integrator fails, or a
 /// [`SymbolicEvalError`] if the expressions cannot be compiled into an
 /// evaluator.
-pub fn eval_ode(
+pub fn solve_ode(
     exprs: Expressions,
     ode_config: OdeConfig,
 ) -> Result<Vec<Vec<f64>>, SymbolicEvalError> {
@@ -183,7 +183,7 @@ impl ODEProblem for SymbolicOde {
     /// Computes `dy = f(t, y)` by evaluating the symbolic RHS.
     ///
     /// The inputs are laid out as `[t, y_0, y_1, ...]` to match the parameter
-    /// ordering expected by [`eval_ode`].
+    /// ordering expected by [`solve_ode`].
     ///
     /// NOTE: Currently, including elements of [`dy`] in the inputs is not supported.
     // TODO: support including elements of `dy` in the inputs. Requires

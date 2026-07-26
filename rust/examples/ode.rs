@@ -17,7 +17,7 @@
 
 use symbolic_eval::{
     expressions::Expressions,
-    ode::{self, eval_ode},
+    ode::{self, solve_ode},
 };
 
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -49,7 +49,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         initial_conditions: vec![1.0, 1.0],
     };
 
-    let trajectory = eval_ode(expressions, config)?;
+    let trajectory = solve_ode(expressions, config)?;
 
     // Each row is `[t, x, y]`, lining up one-to-one with `params`.
     let header: String = params.iter().map(|name| format!("{name:>10}")).collect();

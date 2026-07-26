@@ -254,7 +254,7 @@ mod tests {
         // dy/dt = 1, y(0) = 0  =>  y(t) = t, so the state must always equal the
         // time. The fixed-step solver may overshoot the end of the interval by
         // up to one step, so we don't pin the final t exactly.
-        let result = ode::eval_ode(
+        let result = ode::solve_ode(
             expressions(&["1"], &["t", "y"]),
             rk4_config((0.0, 1.0), 0.1, vec![0.0]),
         )
@@ -271,7 +271,7 @@ mod tests {
 
     fn ode_rows_are_t_then_state() {
         // Two state variables => each row is [t, y0, y1].
-        let result = ode::eval_ode(
+        let result = ode::solve_ode(
             expressions(&["1", "1"], &["t", "y0", "y1"]),
             rk4_config((0.0, 0.5), 0.1, vec![0.0, 0.0]),
         )
@@ -283,7 +283,7 @@ mod tests {
     fn ode_approximates_exponential_growth() {
         // dy/dt = y, y(0) = 1  =>  y(t) = e^t. Compare against the analytic
         // solution at whatever final time the solver reached.
-        let result = ode::eval_ode(
+        let result = ode::solve_ode(
             expressions(&["y"], &["t", "y"]),
             rk4_config((0.0, 1.0), 0.05, vec![1.0]),
         )
@@ -301,7 +301,7 @@ mod tests {
     fn ode_honours_the_configured_time_span() {
         // Regression: the config's t_span must be used. Before the fix the range
         // was hardcoded to (0, 10); with the config it stops just past t = 2.
-        let result = ode::eval_ode(
+        let result = ode::solve_ode(
             expressions(&["1"], &["t", "y"]),
             rk4_config((0.0, 2.0), 0.1, vec![0.0]),
         )
