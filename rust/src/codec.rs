@@ -1,4 +1,8 @@
-//! CBOR (de)serialization and image decoding helpers.
+//! CBOR (de)serialization helpers used to exchange data with the Typst host.
+//!
+//! Typst plugins communicate over raw byte buffers, so plugin arguments and
+//! results are encoded as CBOR. These thin wrappers map the underlying
+//! [`ciborium`] errors onto [`SymbolicEvalError::Cbor`].
 
 use ciborium::{de::from_reader, ser::into_writer};
 
