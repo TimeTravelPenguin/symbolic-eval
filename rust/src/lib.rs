@@ -25,7 +25,7 @@ pub use error::SymbolicEvalError;
 use serde::{Deserialize, Serialize};
 
 #[cfg(target_arch = "wasm32")]
-use wasm_minimal_protocol::{initiate_protocol, wasm_func};
+use wasm_minimal_protocol::initiate_protocol;
 
 #[cfg(target_arch = "wasm32")]
 initiate_protocol!();
