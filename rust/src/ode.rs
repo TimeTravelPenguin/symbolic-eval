@@ -136,9 +136,13 @@ pub fn eval_ode(
     let symbolic_ode = SymbolicOde::new(ev);
     let basic_ode_solver = BasicODESolver::new(ode_config.method);
 
-    let initial_conditions = vec![1.0, 1.0];
     let (t_vec, y_vec) = basic_ode_solver
-        .solve(&symbolic_ode, (0f64, 10f64), 0.01, &initial_conditions)
+        .solve(
+            &symbolic_ode,
+            ode_config.t_span,
+            ode_config.dt,
+            &ode_config.initial_conditions,
+        )
         .map_err(|err| OdeError::OdeSolverError(format!("ODE solver error: {err}")))?;
 
     let result = t_vec
