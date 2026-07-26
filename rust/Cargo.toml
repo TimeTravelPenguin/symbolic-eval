@@ -8,10 +8,10 @@ crate-type = ["cdylib", "lib"]
 
 [dependencies]
 ciborium = "0.2.2"
-getrandom = { version = "0.3" }                                                # match symbolica
+getrandom = { version = "0.3" }                          # match symbolica
 hashbrown = { version = "0.17.1", features = ["serde"] }
 itertools = "0.15.0"
-peroxide = { version = "0.43.0", features = ["O3", "O3-accelerate", "serde"] }
+peroxide = { version = "0.43.0", features = ["serde"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_bytes = "0.11.19"
 thiserror = "2.0.19"
