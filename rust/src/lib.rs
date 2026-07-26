@@ -2,6 +2,8 @@ mod codec;
 pub mod error;
 pub mod evaluation;
 pub mod expressions;
+pub mod ode;
+pub mod wasm;
 
 pub use error::SymbolicEvalError;
 

@@ -8,6 +8,8 @@ pub enum SymbolicEvalError {
     SymbolicaError(#[from] SymbolicaError),
     #[error("Argument error: {0}")]
     ArgumentError(String),
+    #[error(transparent)]
+    OdeError(#[from] crate::ode::OdeError),
 }
 
 #[derive(Debug, Error)]
