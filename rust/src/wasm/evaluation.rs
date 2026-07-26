@@ -25,9 +25,14 @@ use crate::*;
 /// Returns an error if either input fails to decode, any expression or function
 /// fails to parse, or evaluation fails.
 #[cfg_attr(target_arch = "wasm32", wasm_minimal_protocol::wasm_func)]
-pub fn eval_expr(args: &[u8], domains: &[u8]) -> Result<Vec<u8>, SymbolicEvalError> {
+pub fn eval_expr(
+    args: &[u8],
+    domains: &[u8],
+    constants: &[u8],
+) -> Result<Vec<u8>, SymbolicEvalError> {
     let args: PluginArgsExpressions = decode(args)?;
     let domains: Vec<SymbolDomain> = decode(domains)?;
+    let constants: Vec<(String, f64)> = decode(constants)?;
 
     let functions = args
         .functions
@@ -35,12 +40,7 @@ pub fn eval_expr(args: &[u8], domains: &[u8]) -> Result<Vec<u8>, SymbolicEvalErr
         .map(|f| Function::new(&f.name, &f.args, &f.body))
         .collect::<Result<Vec<_>, _>>()?;
 
-    let args = Expressions::new(
-        &args.exprs,
-        &args.params,
-        &functions,
-        Expressions::default_constants(),
-    )?;
+    let args = Expressions::new(&args.exprs, &args.params, &functions, &constants)?;
 
     let results = evaluation::eval_exprs(args, domains)?;
     encode(&results)

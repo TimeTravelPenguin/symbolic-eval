@@ -25,9 +25,14 @@ use crate::*;
 /// Returns an error if either input fails to decode, the expressions fail to
 /// parse, or the solver fails.
 #[cfg_attr(target_arch = "wasm32", wasm_minimal_protocol::wasm_func)]
-pub fn solve_ode(args: &[u8], ode_config: &[u8]) -> Result<Vec<u8>, SymbolicEvalError> {
+pub fn solve_ode(
+    args: &[u8],
+    ode_config: &[u8],
+    constants: &[u8],
+) -> Result<Vec<u8>, SymbolicEvalError> {
     let args: PluginArgsExpressions = decode(args)?;
     let config: OdeConfig = decode(ode_config)?;
+    let constants: Vec<(String, f64)> = decode(constants)?;
 
     let functions = args
         .functions
@@ -35,12 +40,7 @@ pub fn solve_ode(args: &[u8], ode_config: &[u8]) -> Result<Vec<u8>, SymbolicEval
         .map(|f| Function::new(&f.name, &f.args, &f.body))
         .collect::<Result<Vec<_>, _>>()?;
 
-    let exprs = Expressions::new(
-        &args.exprs,
-        &args.params,
-        &functions,
-        Expressions::default_constants(),
-    )?;
+    let exprs = Expressions::new(&args.exprs, &args.params, &functions, &constants)?;
 
     let result = ode::solve_ode(exprs, config)?;
 

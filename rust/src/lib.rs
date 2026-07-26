@@ -330,7 +330,7 @@ mod tests {
         }])
         .unwrap();
 
-        let out = crate::wasm::evaluation::eval_expr(&args, &domains).unwrap();
+        let out = crate::wasm::evaluation::eval_expr(&args, &domains, &[]).unwrap();
         let results: EvaluationResult = crate::codec::decode(&out).unwrap();
         let ys: Vec<f64> = results.iter().map(|(_, out)| out[0]).collect();
 
