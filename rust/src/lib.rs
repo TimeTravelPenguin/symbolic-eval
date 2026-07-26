@@ -1,8 +1,8 @@
 mod codec;
-mod error;
-mod evaluation;
+pub mod error;
+pub mod evaluation;
+pub mod expressions;
 
-use codec::{decode, encode};
 pub use error::SymbolicEvalError;
 
 use serde::{Deserialize, Serialize};
@@ -15,8 +15,6 @@ initiate_protocol!();
 
 #[cfg(target_arch = "wasm32")]
 use std::sync::atomic::{AtomicU64, Ordering};
-
-use crate::evaluation::{EvaluationArgs, Function, SymbolDomain};
 
 #[cfg(target_arch = "wasm32")]
 #[unsafe(no_mangle)]
@@ -49,25 +47,8 @@ pub struct PluginArgsFunction {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct PluginArgs {
+pub struct PluginArgsExpressions {
     pub exprs: Vec<String>,
     pub params: Vec<String>,
     pub functions: Vec<PluginArgsFunction>,
-    pub domains: Vec<SymbolDomain>,
-}
-
-#[cfg_attr(target_arch = "wasm32", wasm_func)]
-pub fn eval_expr(args: &[u8]) -> Result<Vec<u8>, SymbolicEvalError> {
-    let args: PluginArgs = decode(args)?;
-
-    let functions = args
-        .functions
-        .iter()
-        .map(|f| Function::new(&f.name, &f.args, &f.body))
-        .collect::<Result<Vec<_>, _>>()?;
-
-    let args = EvaluationArgs::new(&args.exprs, &args.params, &functions, &args.domains)?;
-    let results = evaluation::eval_exprs(args)?;
-
-    encode(&results)
 }
