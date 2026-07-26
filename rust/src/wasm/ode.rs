@@ -6,6 +6,17 @@ use crate::ode::{self, OdeConfig};
 
 use crate::expressions::Function;
 
+/// Plugin entry point: integrate a symbolic ODE system.
+///
+/// `args` is a CBOR-encoded [`PluginArgsExpressions`] whose expressions form
+/// the RHS `f(t, y)`, and `ode_config` is a CBOR-encoded
+/// [`OdeConfig`](crate::ode::OdeConfig). The result is a CBOR-encoded
+/// `Vec<Vec<f64>>` of `[t, y_0, ...]` rows (see [`ode::eval_ode`]).
+///
+/// # Errors
+///
+/// Returns an error if either input fails to decode, the expressions fail to
+/// parse, or the solver fails.
 #[cfg_attr(target_arch = "wasm32", wasm_func)]
 pub fn eval_ode(args: &[u8], ode_config: &[u8]) -> Result<Vec<u8>, SymbolicEvalError> {
     let args: PluginArgsExpressions = decode(args)?;

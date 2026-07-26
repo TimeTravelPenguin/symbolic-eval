@@ -1,11 +1,29 @@
+//! Sampling expressions over a Cartesian grid of parameter domains.
+
 use itertools::Itertools;
 
 use crate::SymbolicEvalError;
 use crate::expressions::{Expressions, SymbolDomain};
 
+/// The result of [`eval_exprs`]: one `(inputs, outputs)` pair per grid point.
+///
+/// `inputs` holds the parameter values at that point (one per domain, in
+/// parameter order) and `outputs` holds the value of each expression there.
 pub type EvaluationResult = Vec<(Vec<f64>, Vec<f64>)>;
 
-/// Evaluates a single symbolic expression over a specified domain for a given symbol.
+/// Evaluates every expression in `exprs` at every point of the Cartesian
+/// product of the given parameter `domains`.
+///
+/// There must be one [`SymbolDomain`] per free parameter, given in the same
+/// order as [`Expressions::params`]. Each domain is sampled at
+/// [`samples`](SymbolDomain::samples) evenly-spaced points; the first and last
+/// samples are pinned to `min` and `max` exactly to avoid floating-point drift
+/// at the endpoints. The total number of grid points (and result rows) is the
+/// product of all `samples`.
+///
+/// # Errors
+///
+/// Returns an error if the expressions cannot be compiled into an evaluator.
 pub fn eval_exprs(
     exprs: Expressions,
     domains: Vec<SymbolDomain>,
