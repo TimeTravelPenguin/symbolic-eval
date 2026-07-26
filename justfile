@@ -26,8 +26,14 @@ assets:
     # oxipng *.png
 
 examples:
-  # typst c examples/*.typ --root .. --format png --ppi 300
-  # oxipng examples/*.png
+  #!/usr/bin/env bash
+  set -euo pipefail
+
+  for file in examples/*.typ; do
+    name=$(basename "$file" .typ)
+    typst c "$file" "examples/${name}.png" --root . --ppi 300
+  done
+  oxipng examples/*.png
 
 manual *args:
     # typst c --root . manual/manual.typ --input version="{{VER}}" {{ args }}
