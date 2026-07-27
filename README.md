@@ -2,6 +2,18 @@
 
 This package was made possibly by the incredible library, Symbolica.
 
+## Current features
+
+- Fast symbolic evaluations for real and complex-valued functions over provided domains.
+- ODE numerical solvers for expressions (only for real functions). See
+  [peroxide](https://docs.rs/peroxide/0.43.0/peroxide/numerical/ode/index.html)'s docs for
+  information regarding supported integrators.
+
+## Planned features
+
+- A higher-quality complex function phase-plot builder with options for additional visual
+  features (e.g., radial and phase contours).
+
 ## Why does this package exist?
 
 Computational performance is paramount for certain kinds of tasks. It is my belief that
