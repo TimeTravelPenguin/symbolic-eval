@@ -88,3 +88,6 @@
   row-gutter: 0pt,
   ..pixels,
 )
+$
+  f(z) = (z^2 - 1 - i) / (z^2 + 1 + i)
+$

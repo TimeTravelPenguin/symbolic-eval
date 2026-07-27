@@ -131,3 +131,29 @@ If you want to build this package for yourself, you will need a few dependencies
   non-lossy compression. This is currently unused, but will likely be in the future.
 
 Building using `just build` will compile the wasm package into the `./lib/wasm` directory.
+
+## Examples
+
+<table>
+<tr>
+  <td>
+    <a href="examples/eval_multiple_exprs.typ">
+      <img src="examples/eval_multiple_exprs.png" width="250px" alt="Expression evaluation example">
+    </a>
+  </td>
+  <td>
+    <a href="examples/solve_ode_system.typ">
+      <img src="examples/solve_ode_system.png" width="250px" alt="ODE numerical solution example">
+    </a>
+  </td>
+  <td>
+    <a href="examples/phase_portrait.typ">
+      <img src="examples/phase_portrait.png" width="250px" alt="Complex function phase portrait example">
+    </a>
+  </td>
+</tr><tr>
+  <td>Multiple Expression Evaluations</td>
+  <td>Numerical ODE Solution</td>
+  <td>Complex function Phase Portrait</td>
+</tr>
+</table>
