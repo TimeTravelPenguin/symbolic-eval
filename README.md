@@ -166,6 +166,6 @@ If you want to build this package for yourself, you will need a few dependencies
 - [Just](https://github.com/casey/just), required to run the build scripts,
 - [Dasel](https://github.com/TomWright/dasel), used for querying toml data,
 - (Optional) [Oxipng](https://github.com/oxipng/oxipng), used to optimise png files with
-  non-lossy compression. This is currently unused, but will likely be in the future.
+  non-lossy compression.
 
 Building using `just build` will compile the wasm package into the `./lib/wasm` directory.
