@@ -66,19 +66,124 @@ where
     Ok(result)
 }
 
-/// A closed interval `[min, max]` sampled at `samples` evenly-spaced points.
+/// A complex scalar crossing the public Rust and CBOR boundaries.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct ComplexValue {
+    /// The real part.
+    pub re: f64,
+    /// The imaginary part.
+    pub im: f64,
+}
+
+impl ComplexValue {
+    /// Builds a complex scalar from its real and imaginary parts.
+    pub const fn new(re: f64, im: f64) -> Self {
+        ComplexValue { re, im }
+    }
+
+    /// Whether this value has exactly zero imaginary part.
+    pub fn is_real(self) -> bool {
+        self.im == 0.0
+    }
+
+    fn to_atom(self) -> Atom {
+        Atom::num(Complex::new(
+            Float::with_val(53, self.re),
+            Float::with_val(53, self.im),
+        ))
+    }
+}
+
+impl From<f64> for ComplexValue {
+    fn from(value: f64) -> Self {
+        ComplexValue::new(value, 0.0)
+    }
+}
+
+impl From<Complex<f64>> for ComplexValue {
+    fn from(value: Complex<f64>) -> Self {
+        ComplexValue::new(value.re, value.im)
+    }
+}
+
+impl From<ComplexValue> for Complex<f64> {
+    fn from(value: ComplexValue) -> Self {
+        Complex::new(value.re, value.im)
+    }
+}
+
+/// A constant replacement value supplied by callers.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum ConstantValue {
+    /// A real scalar. This keeps the existing Rust and CBOR shape valid.
+    Real(f64),
+    /// A complex scalar encoded as `{ re, im }`.
+    Complex(ComplexValue),
+}
+
+impl ConstantValue {
+    fn into_complex_value(self) -> ComplexValue {
+        match self {
+            ConstantValue::Real(value) => value.into(),
+            ConstantValue::Complex(value) => value,
+        }
+    }
+
+    fn to_atom(self) -> Atom {
+        self.into_complex_value().to_atom()
+    }
+}
+
+impl From<f64> for ConstantValue {
+    fn from(value: f64) -> Self {
+        ConstantValue::Real(value)
+    }
+}
+
+impl From<ComplexValue> for ConstantValue {
+    fn from(value: ComplexValue) -> Self {
+        ConstantValue::Complex(value)
+    }
+}
+
+/// A real interval or rectangular complex domain for one expression parameter.
 ///
-/// Used by [`eval_exprs`](crate::evaluation::eval_exprs) to describe the range
-/// of one parameter. Endpoints are always included exactly (see that function
-/// for the sampling details).
+/// Real domains preserve the original `{ min, max, samples }` wire shape.
+/// Complex domains sample the rectangle
+/// `[min_re, max_re] x [min_im, max_im]`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct SymbolDomain {
-    /// The lower bound of the interval (inclusive).
-    pub min: f64,
-    /// The upper bound of the interval (inclusive).
-    pub max: f64,
-    /// The number of sample points; `1` yields just `min`.
-    pub samples: usize,
+#[serde(untagged)]
+pub enum SymbolDomain {
+    RealDomain {
+        /// The lower bound of the interval (inclusive).
+        min: f64,
+        /// The upper bound of the interval (inclusive).
+        max: f64,
+        /// The number of sample points; `1` yields just `min`.
+        samples: usize,
+    },
+    ComplexDomain {
+        /// The lower bound of the real part (inclusive).
+        min_re: f64,
+        /// The upper bound of the real part (inclusive).
+        max_re: f64,
+        /// The lower bound of the imaginary part (inclusive).
+        min_im: f64,
+        /// The upper bound of the imaginary part (inclusive).
+        max_im: f64,
+        /// The number of sample points along the real axis; `1` yields just `min_re`.
+        samples_re: usize,
+        /// The number of sample points along the imaginary axis; `1` yields just `min_im`.
+        samples_im: usize,
+    },
+}
+
+impl SymbolDomain {
+    /// Whether this domain is the real-only variant.
+    pub fn is_real(&self) -> bool {
+        matches!(self, SymbolDomain::RealDomain { .. })
+    }
 }
 
 /// A user-defined function with its name, formal parameters, and parsed body.
@@ -161,6 +266,39 @@ impl Expressions {
         functions: &[Function],
         constants: &[(impl AsRef<str>, f64)],
     ) -> Result<Self, SymbolicEvalError> {
+        let constants = constants
+            .iter()
+            .map(|(symbol, value)| (symbol.as_ref().to_string(), ConstantValue::Real(*value)))
+            .collect::<Vec<_>>();
+
+        Self::new_with_constants(exprs, params, functions, constants)
+    }
+
+    /// Parses raw string input into an [`Expressions`] with real or complex
+    /// constants.
+    ///
+    /// Real constants may still be supplied as [`ConstantValue::Real`]; complex
+    /// constants use [`ConstantValue::Complex`].
+    pub fn new_with_complex_constants(
+        exprs: &[impl AsRef<str>],
+        params: &[impl AsRef<str>],
+        functions: &[Function],
+        constants: &[(impl AsRef<str>, ConstantValue)],
+    ) -> Result<Self, SymbolicEvalError> {
+        let constants = constants
+            .iter()
+            .map(|(symbol, value)| (symbol.as_ref().to_string(), *value))
+            .collect::<Vec<_>>();
+
+        Self::new_with_constants(exprs, params, functions, constants)
+    }
+
+    fn new_with_constants(
+        exprs: &[impl AsRef<str>],
+        params: &[impl AsRef<str>],
+        functions: &[Function],
+        constants: Vec<(String, ConstantValue)>,
+    ) -> Result<Self, SymbolicEvalError> {
         if exprs.is_empty() {
             return Err(SymbolicEvalError::ArgumentError(
                 "No expressions provided".to_string(),
@@ -173,12 +311,12 @@ impl Expressions {
         let replacements = constants
             .iter()
             .map(|(s, v)| {
-                let symbol = try_symbol!(s.as_ref()).map_err(|s| SymbolicaError::Symbol {
+                let symbol = try_symbol!(s.as_str()).map_err(|s| SymbolicaError::Symbol {
                     input: s.to_string(),
                     message: "Failed to parse symbol".to_string(),
                 })?;
 
-                let value = Atom::num(*v);
+                let value = v.to_atom();
 
                 Ok((symbol, value))
             })
@@ -225,21 +363,30 @@ impl Expressions {
         Ok(())
     }
 
-    /// Compiles the expressions into a reusable [`ExpressionEvaluator<f64>`].
+    /// Adds or overrides a complex constant substitution.
     ///
-    /// Constants in [`replacements`](Self::replacements) are substituted into
-    /// every expression and function body first; the user-defined functions are
-    /// then registered, and finally the complex-valued coefficients produced by
-    /// [`symbolica`] are projected onto their real parts (`c.re`).
-    ///
-    /// The returned evaluator takes one input per entry in
-    /// [`params`](Self::params) and produces one output per expression.
+    /// The given `symbol` will be replaced by `value` in every expression (and
+    /// function body) the next time an evaluator is built.
     ///
     /// # Errors
     ///
-    /// Returns a [`SymbolicaError`] if a function fails to register or the
-    /// evaluator cannot be built.
-    pub fn evaluator(&self) -> Result<ExpressionEvaluator<f64>, SymbolicaError> {
+    /// Returns [`SymbolicaError::Symbol`] if `symbol` is not a valid symbol.
+    pub fn set_complex_constant(
+        &mut self,
+        symbol: impl AsRef<str>,
+        value: ComplexValue,
+    ) -> Result<(), SymbolicEvalError> {
+        let symbol = try_symbol!(symbol.as_ref()).map_err(|s| SymbolicaError::Symbol {
+            input: s.to_string(),
+            message: "Failed to parse symbol".to_string(),
+        })?;
+
+        self.replacements.insert(symbol, value.to_atom());
+
+        Ok(())
+    }
+
+    fn symbolic_evaluator(&self) -> Result<ExpressionEvaluator<Complex<Rational>>, SymbolicaError> {
         let replacements = self
             .replacements
             .iter()
@@ -259,8 +406,43 @@ impl Expressions {
             ev = ev.add_function(f.name, f.args.clone(), body)?;
         }
 
-        // TODO: Support alternate maps
-        let ev = ev.build()?.map_coeff(&|c| c.re.to_f64());
+        Ok(ev.build()?)
+    }
+
+    /// Compiles the expressions into a reusable [`ExpressionEvaluator<f64>`].
+    ///
+    /// Constants in [`replacements`](Self::replacements) are substituted into
+    /// every expression and function body first; the user-defined functions are
+    /// then registered, and finally the complex-valued coefficients produced by
+    /// [`symbolica`] are projected onto their real parts (`c.re`).
+    ///
+    /// The returned evaluator takes one input per entry in
+    /// [`params`](Self::params) and produces one output per expression.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`SymbolicaError`] if a function fails to register or the
+    /// evaluator cannot be built.
+    pub fn evaluator(&self) -> Result<ExpressionEvaluator<f64>, SymbolicaError> {
+        let ev = self.symbolic_evaluator()?.map_coeff(&|c| c.re.to_f64());
+
+        Ok(ev)
+    }
+
+    /// Compiles the expressions into a reusable complex evaluator.
+    ///
+    /// This follows Symbolica's numeric-evaluation path by first building the
+    /// rational-complex evaluator and then mapping coefficients to
+    /// `Complex<f64>`.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`SymbolicaError`] if a function fails to register or the
+    /// evaluator cannot be built.
+    pub fn complex_evaluator(&self) -> Result<ExpressionEvaluator<Complex<f64>>, SymbolicaError> {
+        let ev = self
+            .symbolic_evaluator()?
+            .map_coeff(&|c| Complex::new(c.re.to_f64(), c.im.to_f64()));
 
         Ok(ev)
     }

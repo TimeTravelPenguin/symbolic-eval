@@ -31,12 +31,12 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     // One domain per parameter, in the same order as `params`. The Cartesian
     // product of these is a 3 x 3 grid of nine points.
     let domains = vec![
-        SymbolDomain {
+        SymbolDomain::RealDomain {
             min: 0.0,
             max: 1.0,
             samples: 3,
         },
-        SymbolDomain {
+        SymbolDomain::RealDomain {
             min: -1.0,
             max: 1.0,
             samples: 3,

@@ -4,8 +4,8 @@
 /// This is the package entry point; it re-exports the public API from the
 /// focused modules that make it up:
 ///
-/// - `domain` (from `domain.typ`) and `func` (from `functions.typ`) build the
-///   inputs shared by both features.
+/// - `domain`, `complex`, and `complex_domain` (from `domain.typ`) and `func`
+///   (from `functions.typ`) build the inputs shared by both features.
 /// - `eval_exprs` (from `expressions.typ`) samples one or more expressions over
 ///   a grid of parameter values.
 /// - `solve_ode` (from `ode.typ`), together with `ode_config` and the method
@@ -16,7 +16,7 @@
 /// `pi`, `e`, and `phi` (the golden ratio) are always available, and callers
 /// may supply their own functions with `func`.
 
-#import "domain.typ": domain
+#import "domain.typ": complex, complex_domain, domain
 #import "functions.typ": func
 #import "expressions.typ": eval_exprs
 #import "ode.typ": (

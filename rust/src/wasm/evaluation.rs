@@ -1,6 +1,6 @@
 use crate::codec::{decode, encode};
 use crate::error::SymbolicEvalError;
-use crate::expressions::{Expressions, SymbolDomain};
+use crate::expressions::{ConstantValue, Expressions, SymbolDomain};
 use crate::{PluginArgsExpressions, evaluation};
 
 use crate::expressions::Function;
@@ -16,9 +16,10 @@ use crate::*;
 ///
 /// `args` is a CBOR-encoded [`PluginArgsExpressions`] and `domains` is a
 /// CBOR-encoded `Vec<SymbolDomain>`. The result is a CBOR-encoded
-/// [`EvaluationResult`](crate::evaluation::EvaluationResult). The
-/// [`default_constants`](Expressions::default_constants) (`pi`, `e`, `phi`) are
-/// always made available.
+/// [`EvaluationResult`](crate::evaluation::EvaluationResult) when all domains
+/// and outputs are real, or a CBOR-encoded
+/// [`ComplexEvaluationResult`](crate::evaluation::ComplexEvaluationResult)
+/// otherwise.
 ///
 /// # Errors
 ///
@@ -32,7 +33,12 @@ pub fn eval_expr(
 ) -> Result<Vec<u8>, SymbolicEvalError> {
     let args: PluginArgsExpressions = decode(args)?;
     let domains: Vec<SymbolDomain> = decode(domains)?;
-    let constants: Vec<(String, f64)> = decode(constants)?;
+    let constants: Vec<(String, ConstantValue)> = if constants.is_empty() {
+        Vec::new()
+    } else {
+        decode(constants)?
+    };
+    let all_domains_real = domains.iter().all(SymbolDomain::is_real);
 
     let functions = args
         .functions
@@ -40,8 +46,15 @@ pub fn eval_expr(
         .map(|f| Function::new(&f.name, &f.args, &f.body))
         .collect::<Result<Vec<_>, _>>()?;
 
-    let args = Expressions::new(&args.exprs, &args.params, &functions, &constants)?;
+    let args =
+        Expressions::new_with_complex_constants(&args.exprs, &args.params, &functions, &constants)?;
 
-    let results = evaluation::eval_exprs(args, domains)?;
+    let results = evaluation::eval_complex_exprs(args, domains)?;
+    if all_domains_real
+        && let Ok(real_results) = evaluation::complex_result_to_real(results.clone())
+    {
+        return encode(&real_results);
+    }
+
     encode(&results)
 }

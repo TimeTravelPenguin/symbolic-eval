@@ -112,8 +112,10 @@ mod tests {
     //! helper `fn` so failures still point at a named case.
 
     use crate::error::SymbolicaError;
-    use crate::evaluation::{EvaluationResult, eval_exprs};
-    use crate::expressions::{Expressions, Function, SymbolDomain};
+    use crate::evaluation::{
+        ComplexEvaluationResult, EvaluationResult, eval_complex_exprs, eval_exprs,
+    };
+    use crate::expressions::{ComplexValue, ConstantValue, Expressions, Function, SymbolDomain};
     use crate::ode::{self, OdeConfig};
     use crate::{PluginArgsExpressions, PluginArgsFunction, SymbolicEvalError};
 
@@ -192,7 +194,7 @@ mod tests {
     }
 
     fn a_domain_is_sampled_with_exact_endpoints() {
-        let domain = SymbolDomain {
+        let domain = SymbolDomain::RealDomain {
             min: 0.0,
             max: 2.0,
             samples: 3,
@@ -207,7 +209,7 @@ mod tests {
     }
 
     fn a_single_sample_yields_the_minimum() {
-        let domain = SymbolDomain {
+        let domain = SymbolDomain::RealDomain {
             min: -3.0,
             max: 5.0,
             samples: 1,
@@ -221,12 +223,12 @@ mod tests {
 
     fn domains_form_a_cartesian_product() {
         let domains = vec![
-            SymbolDomain {
+            SymbolDomain::RealDomain {
                 min: 0.0,
                 max: 1.0,
                 samples: 2,
             },
-            SymbolDomain {
+            SymbolDomain::RealDomain {
                 min: 0.0,
                 max: 10.0,
                 samples: 3,
@@ -323,7 +325,7 @@ mod tests {
         })
         .unwrap();
 
-        let domains = crate::codec::encode(&vec![SymbolDomain {
+        let domains = crate::codec::encode(&vec![SymbolDomain::RealDomain {
             min: 0.0,
             max: 3.0,
             samples: 4,
@@ -335,6 +337,131 @@ mod tests {
         let ys: Vec<f64> = results.iter().map(|(_, out)| out[0]).collect();
 
         assert_eq!(ys, [0.0, 1.0, 4.0, 9.0]);
+    }
+
+    fn complex_domain_is_sampled_row_major() {
+        let domain = SymbolDomain::ComplexDomain {
+            min_re: 0.0,
+            max_re: 1.0,
+            min_im: 0.0,
+            max_im: 2.0,
+            samples_re: 2,
+            samples_im: 3,
+        };
+
+        let results = eval_complex_exprs(expressions(&["z^2"], &["z"]), vec![domain]).unwrap();
+        let inputs = results
+            .iter()
+            .map(|(inputs, _)| inputs[0])
+            .collect::<Vec<_>>();
+        let outputs = results
+            .iter()
+            .map(|(_, outputs)| outputs[0])
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            inputs,
+            [
+                ComplexValue::new(0.0, 0.0),
+                ComplexValue::new(1.0, 0.0),
+                ComplexValue::new(0.0, 1.0),
+                ComplexValue::new(1.0, 1.0),
+                ComplexValue::new(0.0, 2.0),
+                ComplexValue::new(1.0, 2.0),
+            ],
+        );
+        assert_eq!(
+            outputs,
+            [
+                ComplexValue::new(0.0, 0.0),
+                ComplexValue::new(1.0, 0.0),
+                ComplexValue::new(-1.0, 0.0),
+                ComplexValue::new(0.0, 2.0),
+                ComplexValue::new(-4.0, 0.0),
+                ComplexValue::new(-3.0, 4.0),
+            ],
+        );
+    }
+
+    fn complex_phase_portrait_function_evaluates() {
+        let domain = SymbolDomain::ComplexDomain {
+            min_re: 1.0,
+            max_re: 2.0,
+            min_im: 0.0,
+            max_im: 0.0,
+            samples_re: 2,
+            samples_im: 1,
+        };
+
+        let results = eval_complex_exprs(
+            expressions(&["(z^2 - 1) / (z^2 + 1)"], &["z"]),
+            vec![domain],
+        )
+        .unwrap();
+        let outputs = results
+            .iter()
+            .map(|(_, outputs)| outputs[0])
+            .collect::<Vec<_>>();
+
+        assert_eq!(outputs[0], ComplexValue::new(0.0, 0.0));
+        assert!((outputs[1].re - 0.6).abs() < 1e-12);
+        assert_eq!(outputs[1].im, 0.0);
+    }
+
+    fn real_domain_with_complex_output_stays_complex() {
+        let domain = SymbolDomain::RealDomain {
+            min: 0.0,
+            max: 1.0,
+            samples: 2,
+        };
+
+        let results = eval_complex_exprs(expressions(&["x + 2i"], &["x"]), vec![domain]).unwrap();
+
+        assert_eq!(results[0].0, [ComplexValue::new(0.0, 0.0)]);
+        assert_eq!(results[0].1, [ComplexValue::new(0.0, 2.0)]);
+        assert_eq!(results[1].0, [ComplexValue::new(1.0, 0.0)]);
+        assert_eq!(results[1].1, [ComplexValue::new(1.0, 2.0)]);
+    }
+
+    fn complex_constants_are_substituted() {
+        let constants = [("k", ConstantValue::Complex(ComplexValue::new(0.0, 1.0)))];
+        let expressions =
+            Expressions::new_with_complex_constants(&["k*z"], &["z"], &[], &constants).unwrap();
+        let domain = SymbolDomain::ComplexDomain {
+            min_re: 1.0,
+            max_re: 1.0,
+            min_im: 2.0,
+            max_im: 2.0,
+            samples_re: 1,
+            samples_im: 1,
+        };
+
+        let results = eval_complex_exprs(expressions, vec![domain]).unwrap();
+
+        assert_eq!(results[0].1, [ComplexValue::new(-2.0, 1.0)]);
+    }
+
+    fn wasm_eval_expr_returns_complex_cbor_when_needed() {
+        let args = crate::codec::encode(&PluginArgsExpressions {
+            exprs: vec!["x + 2i".to_string()],
+            params: vec!["x".to_string()],
+            functions: vec![],
+        })
+        .unwrap();
+
+        let domains = crate::codec::encode(&vec![SymbolDomain::RealDomain {
+            min: 0.0,
+            max: 1.0,
+            samples: 2,
+        }])
+        .unwrap();
+        let constants = crate::codec::encode(&Vec::<(String, ConstantValue)>::new()).unwrap();
+
+        let out = crate::wasm::evaluation::eval_expr(&args, &domains, &constants).unwrap();
+        let results: ComplexEvaluationResult = crate::codec::decode(&out).unwrap();
+
+        assert_eq!(results[0].1, [ComplexValue::new(0.0, 2.0)]);
+        assert_eq!(results[1].1, [ComplexValue::new(1.0, 2.0)]);
     }
 
     /// Runs every Symbolica-backed scenario on this single test thread.
@@ -353,6 +480,10 @@ mod tests {
         a_domain_is_sampled_with_exact_endpoints();
         a_single_sample_yields_the_minimum();
         domains_form_a_cartesian_product();
+        complex_domain_is_sampled_row_major();
+        complex_phase_portrait_function_evaluates();
+        real_domain_with_complex_output_stays_complex();
+        complex_constants_are_substituted();
 
         ode_integrates_a_constant_derivative_exactly();
         ode_rows_are_t_then_state();
@@ -360,5 +491,6 @@ mod tests {
         ode_honours_the_configured_time_span();
 
         wasm_eval_expr_roundtrips_through_cbor();
+        wasm_eval_expr_returns_complex_cbor_when_needed();
     }
 }

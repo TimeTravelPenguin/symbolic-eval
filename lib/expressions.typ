@@ -7,10 +7,13 @@
 /// Every expression is evaluated at every point of the grid formed by
 /// `domains`. There must be one domain per entry in `symbols`, in the same
 /// order. The constants `pi`, `e`, and `phi` are always available.
+/// Symbolica parses numeric imaginary literals such as `2+3i`.
 ///
 /// The result is an array with one entry per grid point. Each entry is a pair
 /// `(inputs, outputs)`, where `inputs` holds the parameter values at that point
-/// and `outputs` holds the value of each expression there.
+/// and `outputs` holds the value of each expression there. Real-only calls
+/// return floats; calls with complex domains or complex outputs return
+/// dictionaries with `re` and `im` fields.
 ///
 /// ```typ
 /// #let res = eval_exprs(
@@ -27,9 +30,29 @@
 ///   `domains` are given.
 /// - functions (array): User functions referenced by the expressions, each
 ///   built with `func`. Pass `()` if there are none.
+/// - constants (array|dictionary): Constant values available to the expressions.
+///   Values may be real numbers or complex values built with `complex`.
 /// - domains (array): One `domain` per entry in `symbols`.
 /// -> array
 #let eval_exprs(exprs, symbols, functions, constants, domains) = {
+  let is-number(value) = type(value) in (int, float)
+  let is-complex-value(value) = {
+    if type(value) != dictionary {
+      false
+    } else {
+      let keys = value.keys()
+
+      "re" in keys and "im" in keys and is-number(value.re) and is-number(value.im)
+    }
+  }
+  let normalize-constant(value) = {
+    if is-number(value) {
+      (re: float(value), im: 0.0)
+    } else {
+      (re: float(value.re), im: float(value.im))
+    }
+  }
+
   assert.eq(type(exprs), array, message: "exprs must be an array")
   assert(
     exprs.all(expr => type(expr) == str),
@@ -47,7 +70,7 @@
 
   assert(
     type(constants) in (array, dictionary),
-    message: "constants must be an array of (str, int|float) pairs or a dictionary",
+    message: "constants must be an array of pairs or a dictionary",
   )
 
   if type(constants) == dictionary {
@@ -55,13 +78,13 @@
   }
 
   assert(
-    constants.all(((_, val)) => type(val) in (int, float)),
-    message: "constant values must be int or float",
+    constants.all(((_, val)) => is-number(val) or is-complex-value(val)),
+    message: "constant values must be int, float, or complex values",
   )
 
   constants = constants.map(((const, val)) => (
     const,
-    float(val),
+    normalize-constant(val),
   ))
 
   let args = cbor.encode((
