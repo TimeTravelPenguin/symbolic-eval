@@ -96,7 +96,7 @@
     y-max: 1.7,
     x-min: 0,
     x-max: 2.9,
-    x-label: [Pray Population ($x$)],
+    x-label: [Prey Population ($x$)],
     y-label: [Predator Population ($y$)],
     legend: "east",
     {
